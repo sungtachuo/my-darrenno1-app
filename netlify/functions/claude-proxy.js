@@ -1,5 +1,3 @@
-const fetch = require('node-fetch'); // 若報錯請確認環境
-
 exports.handler = async (event) => {
   const apiKey = process.env.VITE_CLAUDE_API_KEY;
   const body = JSON.parse(event.body);
