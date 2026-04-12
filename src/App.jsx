@@ -386,22 +386,16 @@ Notion 資料庫固定欄位為：商品名稱、年期、保費、備註
     ...
   ]
 }
-// ... 以上是您原本的代碼 ...
-      ]}); // 這裡是大約 388 行
-
-      // 🚀 請在這裡插入這行「診斷指令」
-      console.log("【秘書診斷】Claude 回傳的原始內容：", getText(analysisResp));
-
-      let parsed;
-      try {
-        const raw = getText(analysisResp).replace(/```json|```/g, "").trim();
-// ... 以下是您原本的解析邏輯 ...
 重要：rows 陣列必須包含圖片中所有資料列，每列對應至 Notion 欄位後呈現。`,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: file.type || "image/png", data: b64 } },
           { type: "text", text: "請分析此表格的欄位結構，並擷取所有列的資料，對應至 Notion 欄位後以 JSON 回應。" },
         ]}],
       });
+
+// 🚀 請把診斷指令改放在這裡（約 400 行的位置）
+    console.log("【秘書核心診斷】API 原始回傳物件：", analysisResp);
+    console.log("【秘書核心診斷】內容文字：", getText(analysisResp));
 
       let parsed;
       try {
