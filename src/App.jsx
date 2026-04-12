@@ -25,14 +25,25 @@ function fileToBase64(f) {
     r.readAsDataURL(f);
   });
 }
-
 async function callClaude(body) {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
+  // 1. 這裡不需要 apiKey 了，因為我們已經在 Netlify 後台設定好，
+  //    中繼站 (Proxy) 會在伺服器端自動讀取它，這樣最安全！
+
+  // 2. 將網址改為 Netlify Functions 的本地路徑
+  const r = await fetch("/.netlify/functions/claude-proxy", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json" 
+      // 注意：x-api-key 已經從這裡拿掉了，因為前端不需要知道金鑰
+    },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`API ${r.status}`);
+
+  if (!r.ok) {
+    const errorDetail = await r.text();
+    throw new Error(`API 連線失敗: ${r.status} - ${errorDetail}`);
+  }
+  
   return r.json();
 }
 
@@ -61,6 +72,8 @@ const C = {
   histBand:    "#EEEDFE",
   tblHead:     "#F8F7FF",
   tblBorder:   "#ddd8f8",
+  statFailBg:   "#FCEBEB", 
+  statFailText: "#E24B4A",
 };
 
 // Fixed Notion field set → color mapping
