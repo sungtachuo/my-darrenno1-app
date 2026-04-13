@@ -30,7 +30,7 @@ exports.handler = async (event) => {
           }
         ],
         generationConfig: {
-          response_mime_type: "application/json", // 強制要求回傳純 JSON
+          responseMimeYype: "application/json", // 強制要求回傳純 JSON
           temperature: 0.1 // 降低隨機性，確保結果精確
         }
       })
