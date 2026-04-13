@@ -361,19 +361,20 @@ export default function App() {
       setPhase("analyzing");
       const b64 = await fileToBase64(file);
 
-// --- 終極防彈版替換開始 (364-405 行) ---
+// --- 終極強韌版替換開始 ---
     const analysisResp = await fetch("/.netlify/functions/gemini-proxy", {
       method: "POST",
       body: JSON.stringify({
-        prompt: `你是專業保險助理。請分析圖片表格並回傳此格式的 JSON：
+        prompt: `你是專業保險商品擷取助理。請精確分析圖片表格並回傳此格式的 JSON：
         {"rows": [{"商品名稱": "...", "年期": "...", "保費": "...", "備註": "..."}], "table_description": "...", "source_columns": [], "notion_mapping": {}}`,
         image: b64
       })
     });
 
     const geminiResult = await analysisResp.json();
-    console.log("【秘書核心診斷】API 原始回傳：", geminiResult);
+    console.log("【秘書核心診斷】API 原始回傳物件：", geminiResult);
 
+    // 攔截 API 錯誤
     if (geminiResult.error) {
       throw new Error(`AI 服務目前無法連線：${geminiResult.error.message}`);
     }
@@ -381,23 +382,22 @@ export default function App() {
     let parsed;
     try {
       const rawText = geminiResult.candidates[0].content.parts[0].text;
-      // 暴力拆解法：不管 AI 說什麼，只挖出第一個 { 到最後一個 } 之間的內容
+      // 暴力提取：在任何文字中找出第一個 { 到最後一個 } 的內容
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : rawText;
       parsed = JSON.parse(jsonString);
     } catch (e) {
-      console.error("解析失敗：", e);
-      throw new Error("AI 數據格式異常，請再試一次");
+      console.error("解析失敗，AI 原始內容為：", geminiResult);
+      throw new Error("AI 數據解析異常，請確認圖片清晰度後重試一次");
     }
 
-    // 這裡解構出變數，讓下方的 Step 2 (存檔邏輯) 可以順利執行
     const { 
       rows = [], 
       notion_mapping: mapping = {}, 
       source_columns: srcCols = [], 
-      table_description: desc = "保險表格" 
+      table_description: desc = "保險表格分析" 
     } = parsed;
-    // --- 終極防彈版替換結束 ---
+    // --- 終極強韌版替換結束 ---
       // ── Step 2: Save in batches of 4 to avoid Notion tool-call limits ──
       setPhase("saving");
       const ts = tsNow();
