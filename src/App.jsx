@@ -361,37 +361,39 @@ export default function App() {
       setPhase("analyzing");
       const b64 = await fileToBase64(file);
 
-// --- 替換開始 ---
+// --- 應急救援版替換開始 ---
     const analysisResp = await fetch("/.netlify/functions/gemini-proxy", {
       method: "POST",
       body: JSON.stringify({
-        prompt: `你是專業的保險商品資料擷取助手。請分析圖片中的表格並回傳純 JSON 格式。
-        Notion 資料庫欄位：商品名稱、年期、保費、備註。
-        請以此 JSON 結構回應：{"rows": [{"商品名稱": "...", "年期": "...", "保費": "...", "備註": "..."}], "table_description": "...", "source_columns": [], "notion_mapping": {}}`,
+        prompt: `你是專業保險助理。請分析圖片表格並回傳此格式的 JSON：
+        {"rows": [{"商品名稱": "...", "年期": "...", "保費": "...", "備註": "..."}], "table_description": "...", "source_columns": [], "notion_mapping": {}}`,
         image: b64
       })
     });
 
     const geminiResult = await analysisResp.json();
-    console.log("【秘書核心診斷】API 原始回傳物件：", geminiResult);
+    console.log("【秘書核心診斷】API 原始回傳：", geminiResult);
 
     let parsed;
     try {
-      const textContent = geminiResult.candidates[0].content.parts[0].text;
-      parsed = JSON.parse(textContent); 
+      const rawText = geminiResult.candidates[0].content.parts[0].text;
+      // 暴力拆解：找出第一個 { 和最後一個 } 之間的內容，防止 AI 說廢話
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : rawText;
+      parsed = JSON.parse(jsonString);
     } catch (e) {
-      console.error("解析失敗，AI 內容為：", geminiResult);
-      throw new Error("AI 無法解析表格，請確認圖片清晰度");
+      console.error("解析失敗：", e);
+      throw new Error("AI 回傳格式異常，請再試一次");
     }
 
-    // 關鍵：從 parsed 中提取變數，供後面的程式碼 (第 408 行等) 使用
+    // 這裡解構出變數，供下方的 Step 2 使用
     const { 
       rows = [], 
       notion_mapping: mapping = {}, 
       source_columns: srcCols = [], 
       table_description: desc = "保險表格" 
     } = parsed;
-    // --- 替換結束 ---
+    // --- 應急救援版替換結束 ---
       // ── Step 2: Save in batches of 4 to avoid Notion tool-call limits ──
       setPhase("saving");
       const ts = tsNow();
