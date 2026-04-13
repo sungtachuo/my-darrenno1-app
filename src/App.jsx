@@ -361,59 +361,33 @@ export default function App() {
       setPhase("analyzing");
       const b64 = await fileToBase64(file);
 
-      const analysisResp = await callClaude({
-        model: MODEL, max_tokens: 4096,
-        system:
-          `你是專業的表格資料擷取助手。請分析圖片中的表格（無論是費率表、商品列表、報價單或其他格式），
-完整識別所有欄位名稱與每一列的資料，並對應至 Notion 資料庫欄位。
+// --- 替換開始 (原 364-405 行) ---
+    // 1. 更換辦公室：改叫 gemini-proxy 接電話
+    const analysisResp = await fetch("/.netlify/functions/gemini-proxy", {
+      method: "POST",
+      body: JSON.stringify({
+        prompt: `你是專業的保險商品資料擷取助手。請分析圖片中的表格。
+        Notion 資料庫欄位：商品名稱、年期、保費、備註。
+        重要：請一律回應純 JSON 格式，不要包含任何 markdown 文字或說明。`,
+        image: b64
+      })
+    });
 
-Notion 資料庫固定欄位為：商品名稱、年期、保費、備註
-重要：「商品名稱」與「產品名稱」為同一欄位，圖片中無論出現哪種說法，一律對應至 Notion 的「商品名稱」欄位。
-請將圖片中的欄位盡力對應到上述欄位。多餘欄位請合併至備註（格式：欄位名稱: 值）。
+    const geminiResult = await analysisResp.json();
+    
+    // 2. 診斷日誌：改用新的結果變數
+    console.log("【秘書核心診斷】API 原始回傳物件：", geminiResult);
 
-回應純 JSON 格式，不含 markdown 或其他說明文字：
-{
-  "table_description": "表格性質說明（如：壽險商品年繳保費費率表）",
-  "source_columns": ["原始欄位1", "原始欄位2", ...],
-  "notion_mapping": {
-    "原始欄位1": "商品名稱",
-    "原始欄位2": "年期",
-    "原始欄位3": "保費",
-    "原始欄位4": "備註"
-  },
-  "rows": [
-    { "商品名稱": "...", "年期": "...", "保費": "...", "備註": "..." },
-    ...
-  ]
-}
-重要：rows 陣列必須包含圖片中所有資料列，每列對應至 Notion 欄位後呈現。`,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: file.type || "image/png", data: b64 } },
-          { type: "text", text: "請分析此表格的欄位結構，並擷取所有列的資料，對應至 Notion 欄位後以 JSON 回應。" },
-        ]}],
-      });
-
-// 🚀 請把診斷指令改放在這裡（約 400 行的位置）
-    console.log("【秘書核心診斷】API 原始回傳物件：", analysisResp);
-    console.log("【秘書核心診斷】內容文字：", getText(analysisResp));
-
-      let parsed;
-      try {
-        const raw = getText(analysisResp).replace(/```json|```/g, "").trim();
-        // handle possible leading/trailing text
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-      } catch { throw new Error("AI 無法解析表格結構，請確認圖片內容清晰"); }
-
-      const {
-        table_description: desc = "表格",
-        source_columns: srcCols = [],
-        notion_mapping: mapping = {},
-        rows = [],
-      } = parsed;
-
-      if (!rows.length) throw new Error("圖片中未偵測到任何資料列");
-
+    let parsed;
+    try {
+      // 3. 簡化解析：不再需要 replace 和 match，直接讀取深層路徑
+      const textContent = geminiResult.candidates[0].content.parts[0].text;
+      parsed = JSON.parse(textContent); 
+    } catch (e) {
+      console.error("解析失敗，AI 原始內容為：", geminiResult);
+      throw new Error("AI 無法解析表格結構，請確認圖片清晰度");
+    }
+    // --- 替換結束 ---
       // ── Step 2: Save in batches of 4 to avoid Notion tool-call limits ──
       setPhase("saving");
       const ts = tsNow();
