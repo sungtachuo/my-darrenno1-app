@@ -6,7 +6,7 @@ exports.handler = async (event) => {
   const body = JSON.parse(event.body);
 
   // 3. 定義 Google Gemini 1.5 Flash 的通訊地址 (API Endpoint)
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
     // 4. 發送請求給 Google
