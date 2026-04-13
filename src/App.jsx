@@ -361,7 +361,7 @@ export default function App() {
       setPhase("analyzing");
       const b64 = await fileToBase64(file);
 
-// --- 終極防禦版替換開始 ---
+// --- 終極防彈版替換開始 ---
     const analysisResp = await fetch("/.netlify/functions/gemini-proxy", {
       method: "POST",
       body: JSON.stringify({
@@ -374,14 +374,15 @@ export default function App() {
     const geminiResult = await analysisResp.json();
     console.log("【秘書核心診斷】API 原始回傳：", geminiResult);
 
-    // 增加防護牆：如果 API 回傳 error 物件，直接報錯
+    // 如果 API 本身報錯，直接攔截
     if (geminiResult.error) {
-      throw new Error(`AI 服務暫時無法使用：${geminiResult.error.message}`);
+      throw new Error(`AI 服務目前無法連線：${geminiResult.error.message}`);
     }
 
     let parsed;
     try {
       const rawText = geminiResult.candidates[0].content.parts[0].text;
+      // 暴力拆解：不管 AI 說什麼，只抓出第一個 { 到最後一個 } 之間的內容
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : rawText;
       parsed = JSON.parse(jsonString);
@@ -390,8 +391,13 @@ export default function App() {
       throw new Error("AI 數據格式異常，請再試一次");
     }
 
-    const { rows = [], notion_mapping: mapping = {}, source_columns: srcCols = [], table_description: desc = "保險表格" } = parsed;
-    // --- 終極防禦版替換結束 ---
+    const { 
+      rows = [], 
+      notion_mapping: mapping = {}, 
+      source_columns: srcCols = [], 
+      table_description: desc = "保險表格" 
+    } = parsed;
+    // --- 終極防彈版替換結束 ---
       // ── Step 2: Save in batches of 4 to avoid Notion tool-call limits ──
       setPhase("saving");
       const ts = tsNow();

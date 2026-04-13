@@ -2,8 +2,8 @@ exports.handler = async (event) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const body = JSON.parse(event.body);
 
-  // 關鍵修正：換回 v1beta，保證能找到 gemini-1.5-flash
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // 核心修正：使用 v1 正式版路徑，這在 Google 全球伺服器是最穩定的
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -12,13 +12,14 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: body.prompt + " \n重要：請僅回傳 JSON 代碼塊，不要有任何解釋文字。" },
+            { text: body.prompt + " \n重要：請僅回傳純 JSON 代碼塊，不要有任何解釋文字。" },
             { inlineData: { mimeType: "image/png", data: body.image } }
           ]
         }],
-        generationConfig: { temperature: 0.1 } // 移除所有會報錯的 MIME 參數
+        // 我們完全不傳 generationConfig，徹底避開「參數未定義」的風險
       })
     });
+
     const data = await response.json();
     return { statusCode: 200, body: JSON.stringify(data) };
   } catch (error) {
