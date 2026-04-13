@@ -2,8 +2,8 @@ exports.handler = async (event) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const body = JSON.parse(event.body);
 
-  // 使用 v1 正式版穩定路徑
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // 1. 使用 v1beta 版本，這是目前對 JSON Mode 支援最完善的接口
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -15,16 +15,17 @@ exports.handler = async (event) => {
             parts: [
               { text: body.prompt },
               {
-                inlineData: { // 👈 這裡必須是大寫 D
-                  mimeType: "image/png", // 👈 這裡必須是大寫 T
+                inlineData: {
+                  mimeType: "image/png",
                   data: body.image
                 }
               }
             ]
           }
         ],
-        generationConfig: { // 👈 這裡必須是大寫 C
-          responseMimeType: "application/json", // 👈 這裡必須是大寫 M 和 T，且無底線
+        // 2. 這是最穩定的參數組合：CamelCase 的父層 + snake_case 的子層
+        generationConfig: {
+          response_mime_type: "application/json",
           temperature: 0.1
         }
       })
