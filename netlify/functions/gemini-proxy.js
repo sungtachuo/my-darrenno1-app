@@ -2,8 +2,11 @@ exports.handler = async (event) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const body = JSON.parse(event.body);
 
-  // 核心修正：使用 v1 正式版路徑，這在 Google 全球伺服器是最穩定的
+  // 1. 回歸正式穩定版 v1，這是全球最保險的路徑
   const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  // 2. 清理圖片數據（避免前綴干擾）
+  const cleanBase64 = body.image.includes("base64,") ? body.image.split("base64,")[1] : body.image;
 
   try {
     const response = await fetch(url, {
@@ -12,11 +15,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: body.prompt + " \n重要：請僅回傳純 JSON 代碼塊，不要有任何解釋文字。" },
-            { inlineData: { mimeType: "image/png", data: body.image } }
+            { text: body.prompt + " \n重要：請僅回傳 JSON 代碼塊，不要有任何解釋文字。" },
+            { inlineData: { mimeType: "image/png", data: cleanBase64 } }
           ]
-        }],
-        // 我們完全不傳 generationConfig，徹底避開「參數未定義」的風險
+        }]
+        // 關鍵：完全移除 generationConfig，徹底避開「Unknown field」報錯
       })
     });
 

@@ -361,7 +361,7 @@ export default function App() {
       setPhase("analyzing");
       const b64 = await fileToBase64(file);
 
-// --- 終極防彈版替換開始 ---
+// --- 終極防彈版替換開始 (364-405 行) ---
     const analysisResp = await fetch("/.netlify/functions/gemini-proxy", {
       method: "POST",
       body: JSON.stringify({
@@ -374,7 +374,6 @@ export default function App() {
     const geminiResult = await analysisResp.json();
     console.log("【秘書核心診斷】API 原始回傳：", geminiResult);
 
-    // 如果 API 本身報錯，直接攔截
     if (geminiResult.error) {
       throw new Error(`AI 服務目前無法連線：${geminiResult.error.message}`);
     }
@@ -382,7 +381,7 @@ export default function App() {
     let parsed;
     try {
       const rawText = geminiResult.candidates[0].content.parts[0].text;
-      // 暴力拆解：不管 AI 說什麼，只抓出第一個 { 到最後一個 } 之間的內容
+      // 暴力拆解法：不管 AI 說什麼，只挖出第一個 { 到最後一個 } 之間的內容
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : rawText;
       parsed = JSON.parse(jsonString);
@@ -391,6 +390,7 @@ export default function App() {
       throw new Error("AI 數據格式異常，請再試一次");
     }
 
+    // 這裡解構出變數，讓下方的 Step 2 (存檔邏輯) 可以順利執行
     const { 
       rows = [], 
       notion_mapping: mapping = {}, 
