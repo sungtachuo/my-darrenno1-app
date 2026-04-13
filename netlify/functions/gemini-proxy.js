@@ -1,7 +1,9 @@
 exports.handler = async (event) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const body = JSON.parse(event.body);
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  // 關鍵修正：換回 v1beta，保證能找到 gemini-1.5-flash
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -14,7 +16,7 @@ exports.handler = async (event) => {
             { inlineData: { mimeType: "image/png", data: body.image } }
           ]
         }],
-        generationConfig: { temperature: 0.1 } // 移除 responseMimeType，保證不報 400 錯誤
+        generationConfig: { temperature: 0.1 } // 移除所有會報錯的 MIME 參數
       })
     });
     const data = await response.json();
