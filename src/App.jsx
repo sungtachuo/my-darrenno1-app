@@ -361,32 +361,36 @@ export default function App() {
       setPhase("analyzing");
       const b64 = await fileToBase64(file);
 
-// --- 替換開始 (原 364-405 行) ---
-    // 1. 更換辦公室：改叫 gemini-proxy 接電話
+// --- 替換開始 ---
     const analysisResp = await fetch("/.netlify/functions/gemini-proxy", {
       method: "POST",
       body: JSON.stringify({
-        prompt: `你是專業的保險商品資料擷取助手。請分析圖片中的表格。
+        prompt: `你是專業的保險商品資料擷取助手。請分析圖片中的表格並回傳純 JSON 格式。
         Notion 資料庫欄位：商品名稱、年期、保費、備註。
-        重要：請一律回應純 JSON 格式，不要包含任何 markdown 文字或說明。`,
+        請以此 JSON 結構回應：{"rows": [{"商品名稱": "...", "年期": "...", "保費": "...", "備註": "..."}], "table_description": "...", "source_columns": [], "notion_mapping": {}}`,
         image: b64
       })
     });
 
     const geminiResult = await analysisResp.json();
-    
-    // 2. 診斷日誌：改用新的結果變數
     console.log("【秘書核心診斷】API 原始回傳物件：", geminiResult);
 
     let parsed;
     try {
-      // 3. 簡化解析：不再需要 replace 和 match，直接讀取深層路徑
       const textContent = geminiResult.candidates[0].content.parts[0].text;
       parsed = JSON.parse(textContent); 
     } catch (e) {
-      console.error("解析失敗，AI 原始內容為：", geminiResult);
-      throw new Error("AI 無法解析表格結構，請確認圖片清晰度");
+      console.error("解析失敗，AI 內容為：", geminiResult);
+      throw new Error("AI 無法解析表格，請確認圖片清晰度");
     }
+
+    // 關鍵：從 parsed 中提取變數，供後面的程式碼 (第 408 行等) 使用
+    const { 
+      rows = [], 
+      notion_mapping: mapping = {}, 
+      source_columns: srcCols = [], 
+      table_description: desc = "保險表格" 
+    } = parsed;
     // --- 替換結束 ---
       // ── Step 2: Save in batches of 4 to avoid Notion tool-call limits ──
       setPhase("saving");
